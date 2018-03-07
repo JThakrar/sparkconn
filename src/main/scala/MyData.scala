@@ -10,13 +10,11 @@ import org.apache.spark.rdd.RDD
 // https://docs.databricks.com/spark/latest/rdd-streaming/tips-for-running-streaming-apps-in-databricks.html
 
 /**
-  * val mydata = spark.read.
-  * format("MyDataProvider").
-  * .option("spark.mydata.numpartitions", "5").
-  * option("spark.mydata.rowsperpartition", "20").
-  * load()
+  * spark-shell --jars target/scala-2.11/sparkconn-assembly-0.1.jar
   *
+  * val mydata = spark.read.format("MyDataProvider").option("numpartitions", "5").option("rowsperpartition", "10").load()
   * mydata.show(100, false)
+  *
   */
 
 class MyDataProvider extends DataSourceRegister with RelationProvider with Logging {
@@ -27,8 +25,8 @@ class MyDataProvider extends DataSourceRegister with RelationProvider with Loggi
 
   override def createRelation(sqlContext: SQLContext,
                               parameters: Map[String, String]): BaseRelation = {
-    val numPartitions: Int = parameters.getOrElse("spark.mydatastream.numpartitions", "1").toInt
-    val rowsPerPartition: Int = parameters.getOrElse("spark.mydatastream.rowsperpartition", "5").toInt
+    val numPartitions: Int = parameters.getOrElse("numpartitions", "2").toInt
+    val rowsPerPartition: Int = parameters.getOrElse("rowsperpartition", "5").toInt
     new MyDataRelation(sqlContext, myDataSchema, numPartitions, rowsPerPartition)
   }
 
@@ -55,7 +53,8 @@ class MyDataRDD(sc: SparkContext,
                 rowsPerPartition: Int) extends RDD[Row](sc, Nil) {
 
   override def getPartitions: Array[Partition] = {
-    val partitions: Seq[Partition] = 0 until numPartitions map(partitionId => new MyDataPartition(partitionId,rowsPerPartition))
+    val partitionSeq: Seq[Int] = 0 until numPartitions
+    val partitions: Seq[Partition] =  partitionSeq.map(partitionId => new MyDataPartition(partitionId,rowsPerPartition))
     partitions.toArray
   }
 

@@ -13,8 +13,8 @@ import org.apache.spark.rdd.RDD
   *
   * val mydataStream = spark.readStream.
   * format("MyDataStreamProvider").
-  * option("spark.mydatastream.numpartitions", "5").
-  * option("spark.mydatastream.rowsperpartition", "20").
+  * option("numpartitions", "5").
+  * option("rowsperpartition", "10").
   * load()
   *
   * val query = mydataStream.
@@ -46,8 +46,8 @@ class MyDataStreamProvider extends DataSourceRegister with StreamSourceProvider 
                             metadataPath: String,
                             schema: Option[StructType],
                             providerName: String, parameters: Map[String, String]): Source = {
-    val numPartitions: Int = parameters.getOrElse("spark.mydatastream.numpartitions", "1").toInt
-    val rowsPerPartition: Int = parameters.getOrElse("spark.mydatastream.rowsperpartition", "5").toInt
+    val numPartitions: Int = parameters.getOrElse("numpartitions", "1").toInt
+    val rowsPerPartition: Int = parameters.getOrElse("rowsperpartition", "5").toInt
     new MyDataStreamSource(sqlContext, schema.getOrElse(myDataStreamSchema), numPartitions, rowsPerPartition)
   }
 
@@ -86,7 +86,8 @@ class MyDataStreamRDD(_sc: SparkContext,
                       rowsPerPartition: Int) extends RDD[Row](_sc, Nil) {
 
   override def getPartitions: Array[Partition] = {
-    val partitions = 0 until numPartitions map(partitionId => new MyDataStreamPartition(partitionId, streamTime, rowsPerPartition))
+    val partitionSeq: Seq[Int] = 0 until numPartitions
+    val partitions = partitionSeq.map(partitionId => new MyDataStreamPartition(partitionId, streamTime, rowsPerPartition))
     partitions.toArray
   }
 
