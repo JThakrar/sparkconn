@@ -74,7 +74,8 @@ The project can be build using `sbt assembly` and tested using spark-shell as fo
 ```
 spark-shell --jars target/scala-2.11/sparkconn-assembly-0.1.jar
 ....
-val mydata = spark.read.format("MyDataProvider").option("numpartitions", "5").option("rowsperpartition", "10").load()
+val mydata = spark.read.format("MyDataProvider").
+option("numpartitions", "5").option("rowsperpartition", "10").load()
 mydata.show(100, false)
 ```
 
@@ -87,9 +88,12 @@ import org.apache.spark.sql.streaming.Trigger
 
 import org.apache.spark.sql.streaming.ProcessingTime
 
-val mydataStream = spark.readStream.format("MyDataStreamProvider").option("numpartitions", "5").option("rowsperpartition", "10").load()
+val mydataStream = spark.readStream.format("MyDataStreamProvider").
+option("numpartitions", "5").option("rowsperpartition", "10").load()
 
-val query = mydataStream.writeStream.outputMode("append").format("console").option("truncate", "false").option("numRows", "100").trigger(ProcessingTime("5 second")).start()
+val query = mydataStream.writeStream.outputMode("append").
+format("console").option("truncate", "false").
+option("numRows", "100").trigger(ProcessingTime("5 second")).start()
 
 Thread.sleep(15000)
 
