@@ -6,7 +6,8 @@ scalaVersion := "2.11.8"
 
 val scalaTestVersion = "3.0.4"
 
-val sparkVersion = "2.2.1"
+// val sparkVersion = "2.2.1"
+val sparkVersion = "2.3.0"
 
 val json4sVersion = "3.5.3"
 

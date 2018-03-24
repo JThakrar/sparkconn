@@ -2,23 +2,25 @@
 
 ## Motivation
 Apache Spark has become the preferred tool for ETL, machine-learning and distributed 
-data processing in general in the Hadoop and big data ecosystem for several reasons. 
+data processing in the Hadoop and big data ecosystem for several reasons. 
 First, it offers a unifying, consistent, easy-to-use REPL-based interactive and 
 programmatic environment for all those kinds of processing. 
 Second, the Spark ecosystem has built-in as well as third-party connectors to pull 
-and push data from a variety of batch (or static) and streaming data sources.
+and push data from a variety of batch (or static) and streaming data sources. 
+And third, there is a good userbase and ecosystem along with several resources.
 
 However there are occasions where a connector for a specific data source
 is not available or an existing connector is not suitable and needs considerable 
-modification to fit the use case.
+modification to fit a use case.
 
 This is a very simple tutorial and working example to help understand how batch and streaming 
-data source connectors work.
+data source and sink connectors work. The intent is that the examples will help developers 
+build new connnectors as well as improve/customize existing ones.
 
 ## Details
-For the purpose of this tutorial, a data source that just produces a simple string based dataset
-for both batch and streaming datastream. Note that the notion of distrubted dataset in Spark has
-been evolving - starting with RDD with the initial version and no strong notion of a 
+For the purpose of this tutorial, a data source that just produces a single string based dataset
+for both batch and streaming datastream is being considered. Note that the notion of distrubted 
+dataset in Spark has been evolving - starting with RDD with the initial version and no strong notion of a 
 schema for the distributed dataset, then evolving to DataFrame with schema,
 followed by Dataset which are strongly typed. On the streaming front, the idea was introduced
 using dstream (spark streaming), followed by structured streaming which introduced once-only 
@@ -27,7 +29,7 @@ As of this writing (March 2018), Beginning Spark 2.3 (released Feb 28, 2018),
 I see another evolution in the works for structured streaming that does away with offsets and 
 also facilitates "continuous streaming".
 
-Static distributed data with a schema is referred to as a relation, while a structured 
+Static distributed data (aka RDD) with a schema is referred to as a relation, while a structured 
 datastream with a schema is referred to as a source. 
 The schema can be pre-determined, user-provided or inferred from the datasource.
 The following references provide more details on RDDs and structure data streams.
@@ -59,24 +61,36 @@ wherein each data tuple (row) is uniquely identified by an offset (similar to of
 and the streaming Source is required to have the ability to generate an RDD from a specified start and end offset.
 
 
-# Sample Datasource Connectors
+# Sample Datasource and Datasink Connectors
 
 This project contains very trivial data source connectors that generate a simple string. 
 For batch, the generated string is of the form "Partition: N, row X of Y" 
 where N is the partition number and for streaming, the string is of the form "Partition: N for time T, row X of Y"
 
+The batch and streaming datasinks simply print the input data to the console with some additional diagnostic information.
 
 # Build and Test
 
 The project can be build using `sbt assembly` and tested using spark-shell as follows:
 
-## Batch Datasource
+## Batch Source and Sink
 ```
 spark-shell --jars target/scala-2.11/sparkconn-assembly-0.1.jar
 ....
-val mydata = spark.read.format("MyDataProvider").
-option("numpartitions", "5").option("rowsperpartition", "10").load()
-mydata.show(100, false)
+val mydata1 = spark.read.format("MyDataBatchProvider").load()
+mydata1.show(100, false)
+
+val mydata2 = spark.read.format("MyDataBatchProvider").
+option("numpartitions", "5").option("rowsperpartition", "10").
+load()
+mydata2.show(100, false)
+
+mydata1.write.format("MyDataBatchSink").save
+
+mydata1.write.format("MyDataBatchSink").mode("append").save
+
+val mydata3 = spark.createDataset(1 to 10)
+mydata3.write.format("MyDataBatchSink").save
 ```
 
 
@@ -100,3 +114,5 @@ Thread.sleep(15000)
 query.stop()
 
 ```
+
+## S
