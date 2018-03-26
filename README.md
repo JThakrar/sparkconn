@@ -77,20 +77,20 @@ The project can be build using `sbt assembly` and tested using spark-shell as fo
 ```
 spark-shell --jars target/scala-2.11/sparkconn-assembly-0.1.jar
 ....
-val mydata1 = spark.read.format("MyDataBatchProvider").load()
+val mydata1 = spark.read.format("BatchDataProvider").load()
 mydata1.show(100, false)
 
-val mydata2 = spark.read.format("MyDataBatchProvider").
+val mydata2 = spark.read.format("BatchDataProvider").
 option("numpartitions", "5").option("rowsperpartition", "10").
 load()
 mydata2.show(100, false)
 
-mydata1.write.format("MyDataBatchSink").save
+mydata1.write.format("BatchDataSink").save
 
-mydata1.write.format("MyDataBatchSink").mode("append").save
+mydata1.write.format("BatchDataSink").mode("append").save
 
 val mydata3 = spark.createDataset(1 to 10)
-mydata3.write.format("MyDataBatchSink").save
+mydata3.write.format("BatchDataSink").save
 ```
 
 
@@ -98,11 +98,11 @@ mydata3.write.format("MyDataBatchSink").save
 ```
 spark-shell --jars target/scala-2.11/sparkconn-assembly-0.1.jar
 ....
+import org.apache.spark.sql.jayesh._
 import org.apache.spark.sql.streaming.Trigger
-
 import org.apache.spark.sql.streaming.ProcessingTime
 
-val mydataStream = spark.readStream.format("MyDataStreamProvider").
+val mydataStream = spark.readStream.format("org.apache.spark.sql.jayesh.StreamDataProvider").
 option("numpartitions", "5").option("rowsperpartition", "10").load()
 
 val query = mydataStream.writeStream.outputMode("append").
