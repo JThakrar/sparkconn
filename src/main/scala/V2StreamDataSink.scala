@@ -1,18 +1,15 @@
 
 import java.io.Serializable
-import java.util.Optional
 
-import scala.collection.JavaConverters
-
-import org.apache.spark.sql.{Row, SQLContext, SaveMode}
-import org.apache.spark.sql.sources.v2.{DataSourceOptions, StreamWriteSupport}
-import org.apache.spark.sql.sources.v2.writer.{DataSourceWriter, DataWriter, DataWriterFactory, WriterCommitMessage}
+import org.apache.spark.sql.Row
 import org.apache.spark.sql.sources.v2.writer.streaming.StreamWriter
+import org.apache.spark.sql.sources.v2.writer.{DataWriter, DataWriterFactory, WriterCommitMessage}
+import org.apache.spark.sql.sources.v2.{DataSourceOptions, StreamWriteSupport}
 import org.apache.spark.sql.streaming.OutputMode
 import org.apache.spark.sql.types.StructType
 
 
-class StreamDataSink
+class V2StreamDataSink
   extends StreamWriteSupport {
 
   override def createStreamWriter(queryId: java.lang.String,
@@ -20,20 +17,20 @@ class StreamDataSink
                                   mode: OutputMode,
                                   options: DataSourceOptions): StreamWriter = {
 
-    new StreamDataSinkWriter(queryId, schema, mode, options)
+    new V2StreamDataSinkWriter(queryId, schema, mode, options)
   }
 
 }
 
 
-class StreamDataSinkWriter(queryId: java.lang.String,
-                           schema: StructType,
-                           mode: OutputMode,
-                           options: DataSourceOptions)
+class V2StreamDataSinkWriter(queryId: java.lang.String,
+                             schema: StructType,
+                             mode: OutputMode,
+                             options: DataSourceOptions)
 extends StreamWriter {
 
   override def createWriterFactory(): DataWriterFactory[Row] = {
-    new StreamDataWriterFactory[Row](queryId, schema, mode)
+    new V2StreamDataWriterFactory[Row](queryId, schema, mode)
   }
 
   override def commit(epochId: Long, messages: Array[WriterCommitMessage]): Unit = {
@@ -48,22 +45,22 @@ extends StreamWriter {
 
 }
 
-class StreamDataWriterFactory[Row](queryId: java.lang.String,
-                                   schema: StructType,
-                                   mode: OutputMode)
+class V2StreamDataWriterFactory[Row](queryId: java.lang.String,
+                                     schema: StructType,
+                                     mode: OutputMode)
   extends DataWriterFactory[Row] with Serializable {
 
   override def createDataWriter(partitionId: Int,  attemptNumber: Int): DataWriter[Row] = {
-    (new StreamDataWriter(queryId, schema, mode, partitionId, attemptNumber)).asInstanceOf[DataWriter[Row]]
+    (new V2StreamDataWriter(queryId, schema, mode, partitionId, attemptNumber)).asInstanceOf[DataWriter[Row]]
   }
 }
 
 
-class StreamDataWriter(queryId: java.lang.String,
-                       schema: StructType,
-                       mode: OutputMode,
-                       partitionId: Int,
-                       attemptNumber: Int)
+class V2StreamDataWriter(queryId: java.lang.String,
+                         schema: StructType,
+                         mode: OutputMode,
+                         partitionId: Int,
+                         attemptNumber: Int)
   extends DataWriter[Row]{
 
   override def write(row: Row): Unit =
@@ -72,7 +69,7 @@ class StreamDataWriter(queryId: java.lang.String,
   // and so the write logic needs to extract the individual fields from the provided schema.
     println(s"JobId: ${queryId} | Partition: ${partitionId}, AttemptNumber: ${attemptNumber} | *** ${row} ***")
 
-  override def commit: WriterCommitMessage = StreamDataCommitMessage(queryId, partitionId, attemptNumber)
+  override def commit: WriterCommitMessage = V2StreamDataCommitMessage(queryId, partitionId, attemptNumber)
 
   override def abort(): Unit =
     println(s"JobId: ${queryId} | Partition: ${partitionId}, AttemptNumber: ${attemptNumber} | *** >>> ABORTED <<< ***")
@@ -80,4 +77,4 @@ class StreamDataWriter(queryId: java.lang.String,
 }
 
 
-case class StreamDataCommitMessage(queryId: java.lang.String, partitionId: Int, attemptNumber: Int) extends WriterCommitMessage
+case class V2StreamDataCommitMessage(queryId: java.lang.String, partitionId: Int, attemptNumber: Int) extends WriterCommitMessage

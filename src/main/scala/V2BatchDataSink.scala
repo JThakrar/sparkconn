@@ -7,26 +7,26 @@ import org.apache.spark.sql.sources.v2.{DataSourceOptions, WriteSupport}
 import org.apache.spark.sql.sources.v2.writer.{DataSourceWriter, DataWriter, DataWriterFactory, WriterCommitMessage}
 import org.apache.spark.sql.types.StructType
 
-class BatchDataSink
+class V2BatchDataSink
   extends WriteSupport {
 
   override def createWriter(jobId: java.lang.String,
                             schema: StructType,
                             mode: SaveMode,
                             options: DataSourceOptions): Optional[DataSourceWriter] = {
-    // Note that found that "optons" is not seriablizable - so if you want to "pass down" any information
+    // Note that found that "options" is not seriablizable - so if you want to "pass down" any information
     // contained in it, you need to extract it, ensure that is serializable and then pass it downstream.
-    Optional.of(new BatchDataSinkWriter(jobId, schema, mode))
+    Optional.of(new V2BatchDataSinkWriter(jobId, schema, mode))
   }
 }
 
 
-class BatchDataSinkWriter(jobId: java.lang.String, schema: StructType, mode: SaveMode)
+class V2BatchDataSinkWriter(jobId: java.lang.String, schema: StructType, mode: SaveMode)
 extends DataSourceWriter {
 
   override def createWriterFactory(): DataWriterFactory[Row] = {
     println(s"Creating data sink for schema:\n${schema}\n")
-    new BatchDataWriterFactory(jobId, schema, mode)
+    new V2BatchDataWriterFactory(jobId, schema, mode)
   }
 
   override def commit(messages: Array[WriterCommitMessage]): Unit = {
@@ -41,20 +41,20 @@ extends DataSourceWriter {
 }
 
 
-class BatchDataWriterFactory[Row](jobId: java.lang.String, schema: StructType, mode: SaveMode)
+class V2BatchDataWriterFactory[Row](jobId: java.lang.String, schema: StructType, mode: SaveMode)
   extends DataWriterFactory[Row] with Serializable {
 
   override def createDataWriter(partitionId: Int,  attemptNumber: Int): DataWriter[Row] = {
-    (new BatchDataWriter(jobId, schema, mode, partitionId, attemptNumber)).asInstanceOf[DataWriter[Row]]
+    (new V2BatchDataWriter(jobId, schema, mode, partitionId, attemptNumber)).asInstanceOf[DataWriter[Row]]
   }
 }
 
 
-class BatchDataWriter(jobId: java.lang.String,
-                      schema: StructType,
-                      mode: SaveMode,
-                      partitionId: Int,
-                      attemptNumber: Int)
+class V2BatchDataWriter(jobId: java.lang.String,
+                        schema: StructType,
+                        mode: SaveMode,
+                        partitionId: Int,
+                        attemptNumber: Int)
 extends DataWriter[Row]{
 
   override def write(row: Row): Unit =
@@ -63,7 +63,7 @@ extends DataWriter[Row]{
     // and so the write logic needs to extract the individual fields from the provided schema.
     println(s"JobId: ${jobId} | Partition: ${partitionId}, AttemptNumber: ${attemptNumber} | *** ${row} ***")
 
-  override def commit: WriterCommitMessage = MyDataBatchCommitMessage(jobId, partitionId, attemptNumber)
+  override def commit: WriterCommitMessage = CommitMessage(jobId, partitionId, attemptNumber)
 
   override def abort(): Unit =
     println(s"JobId: ${jobId} | Partition: ${partitionId}, AttemptNumber: ${attemptNumber} | *** >>> ABORTED <<< ***")
@@ -71,4 +71,4 @@ extends DataWriter[Row]{
 }
 
 
-case class MyDataBatchCommitMessage(jobId: java.lang.String, partitionId: Int, attemptNumber: Int) extends WriterCommitMessage
+case class CommitMessage(jobId: java.lang.String, partitionId: Int, attemptNumber: Int) extends WriterCommitMessage

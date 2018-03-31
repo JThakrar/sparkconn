@@ -1,17 +1,15 @@
 
 
 import java.util.Optional
-import scala.collection.JavaConverters._
 
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.sources.DataSourceRegister
-import org.apache.spark.sql.sources.v2.{DataSourceOptions, DataSourceV2, MicroBatchReadSupport, ReadSupport}
-import org.apache.spark.sql.sources.v2.reader.DataSourceReader
-import org.apache.spark.sql.sources.v2.reader.DataReaderFactory
-import org.apache.spark.sql.sources.v2.reader.DataReader
-import org.apache.spark.sql.sources.v2.reader.streaming.MicroBatchReader
+import org.apache.spark.sql.sources.v2.reader.{DataReader, DataReaderFactory}
+import org.apache.spark.sql.sources.v2.reader.streaming.{MicroBatchReader, Offset}
+import org.apache.spark.sql.sources.v2.{DataSourceOptions, DataSourceV2, MicroBatchReadSupport}
 import org.apache.spark.sql.types.{StringType, StructField, StructType}
-import org.apache.spark.sql.sources.v2.reader.streaming.Offset
+
+import scala.collection.JavaConverters._
 
 
 
@@ -148,7 +146,7 @@ class V2MicroBatchDataReader(partitionNumber: Int, startOffset: V2MicroBatchOffs
 
     if (next) {
       startRow += 1
-      resultRow = Row(s"Partition: ${partitionNumber} || Row ${startRow} from range of ${startOffset} and ${endOffset}")
+      resultRow = Row(s"Partition: ${partitionNumber} || Row ${startRow} in range of (${startOffset} through ${endOffset}]")
     } else {
       new IllegalArgumentException
     }
