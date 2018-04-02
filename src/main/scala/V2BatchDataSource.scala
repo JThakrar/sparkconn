@@ -17,7 +17,8 @@ import scala.collection.JavaConverters._
   *
   *}}}
   */
-class V2BatchDataSource extends DataSourceRegister with DataSourceV2 with ReadSupport {
+class V2BatchDataSource
+  extends DataSourceRegister with DataSourceV2 with ReadSupport {
 
   val DEFAULT_PARTITION_COUNT: Int = 5
 
@@ -37,7 +38,9 @@ class V2BatchDataSource extends DataSourceRegister with DataSourceV2 with ReadSu
 }
 
 
-class V2BatchDataSourceReader(partitions: Int, rows: Int) extends DataSourceReader {
+class V2BatchDataSourceReader(partitions: Int,
+                              rows: Int)
+  extends DataSourceReader {
 
   println(s"\n\nCreating ${this.getClass.getName}: ${partitions} partitions and ${rows} rowsPerPartition each\n")
 
@@ -55,22 +58,25 @@ class V2BatchDataSourceReader(partitions: Int, rows: Int) extends DataSourceRead
 
 class V2BatchDataReaderFactory(partitionNumber: Int,
                                rows: Int,
-                               totalPartitions: Int) extends DataReaderFactory[Row] {
+                               totalPartitions: Int)
+  extends DataReaderFactory[Row] {
 
   println(s"\n\nCreating ${this.getClass.getName}: ${partitionNumber} of ${totalPartitions}\n")
 
   override def createDataReader(): DataReader[Row] = {
-    new V2BatchDataReader(partitionNumber, rows, totalPartitions)
+    new V2BatchDataReader(partitionNumber, rows)
   }
 
 }
 
 
-class V2BatchDataReader(partitionNumber: Int, rows: Int, totalPartitions: Int) extends DataReader[Row] {
+class V2BatchDataReader(partitionNumber: Int,
+                        rows: Int)
+  extends DataReader[Row] {
 
   private var rowsRemaining = rows
 
-  println(s"\n\nCreating ${this.getClass.getName}: ${partitionNumber} of ${totalPartitions}\n")
+  println(s"\n\nCreating ${this.getClass.getName}: ${partitionNumber}\n")
 
   override def next(): Boolean = rowsRemaining > 0
 
@@ -79,7 +85,7 @@ class V2BatchDataReader(partitionNumber: Int, rows: Int, totalPartitions: Int) e
 
     if (next) {
       rowsRemaining = rowsRemaining - 1
-      resultRow = Row(s"Partition: ${partitionNumber} of ${totalPartitions} || Row ${rows - rowsRemaining} of ${rows}")
+      resultRow = Row(s"Partition: ${partitionNumber} || Row ${rows - rowsRemaining} of ${rows}")
     } else {
       new IllegalArgumentException
     }

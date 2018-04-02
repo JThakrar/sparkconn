@@ -27,7 +27,7 @@ class V2StreamDataSinkWriter(queryId: java.lang.String,
                              schema: StructType,
                              mode: OutputMode,
                              options: DataSourceOptions)
-extends StreamWriter {
+  extends StreamWriter {
 
   override def createWriterFactory(): DataWriterFactory[Row] = {
     new V2StreamDataWriterFactory[Row](queryId, schema, mode)
@@ -77,4 +77,7 @@ class V2StreamDataWriter(queryId: java.lang.String,
 }
 
 
-case class V2StreamDataCommitMessage(queryId: java.lang.String, partitionId: Int, attemptNumber: Int) extends WriterCommitMessage
+case class V2StreamDataCommitMessage(queryId: java.lang.String,
+                                     partitionId: Int,
+                                     attemptNumber: Int)
+  extends WriterCommitMessage

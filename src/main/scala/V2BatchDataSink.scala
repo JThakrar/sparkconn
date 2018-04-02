@@ -21,8 +21,10 @@ class V2BatchDataSink
 }
 
 
-class V2BatchDataSinkWriter(jobId: java.lang.String, schema: StructType, mode: SaveMode)
-extends DataSourceWriter {
+class V2BatchDataSinkWriter(jobId: java.lang.String,
+                            schema: StructType,
+                            mode: SaveMode)
+  extends DataSourceWriter {
 
   override def createWriterFactory(): DataWriterFactory[Row] = {
     println(s"Creating data sink for schema:\n${schema}\n")
@@ -41,10 +43,13 @@ extends DataSourceWriter {
 }
 
 
-class V2BatchDataWriterFactory[Row](jobId: java.lang.String, schema: StructType, mode: SaveMode)
+class V2BatchDataWriterFactory[Row](jobId: java.lang.String,
+                                    schema: StructType,
+                                    mode: SaveMode)
   extends DataWriterFactory[Row] with Serializable {
 
-  override def createDataWriter(partitionId: Int,  attemptNumber: Int): DataWriter[Row] = {
+  override def createDataWriter(partitionId: Int,
+                                attemptNumber: Int): DataWriter[Row] = {
     (new V2BatchDataWriter(jobId, schema, mode, partitionId, attemptNumber)).asInstanceOf[DataWriter[Row]]
   }
 }
@@ -55,7 +60,7 @@ class V2BatchDataWriter(jobId: java.lang.String,
                         mode: SaveMode,
                         partitionId: Int,
                         attemptNumber: Int)
-extends DataWriter[Row]{
+  extends DataWriter[Row]{
 
   override def write(row: Row): Unit =
     // Note that currently, the line below is printed/output for EACH row. That is the batch sink.
@@ -63,7 +68,7 @@ extends DataWriter[Row]{
     // and so the write logic needs to extract the individual fields from the provided schema.
     println(s"JobId: ${jobId} | Partition: ${partitionId}, AttemptNumber: ${attemptNumber} | *** ${row} ***")
 
-  override def commit: WriterCommitMessage = CommitMessage(jobId, partitionId, attemptNumber)
+  override def commit: WriterCommitMessage = V2BatchDataCommitMessage(jobId, partitionId, attemptNumber)
 
   override def abort(): Unit =
     println(s"JobId: ${jobId} | Partition: ${partitionId}, AttemptNumber: ${attemptNumber} | *** >>> ABORTED <<< ***")
@@ -71,4 +76,7 @@ extends DataWriter[Row]{
 }
 
 
-case class CommitMessage(jobId: java.lang.String, partitionId: Int, attemptNumber: Int) extends WriterCommitMessage
+case class V2BatchDataCommitMessage(jobId: java.lang.String,
+                                    partitionId: Int,
+                                    attemptNumber: Int)
+  extends WriterCommitMessage

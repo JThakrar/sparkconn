@@ -12,17 +12,8 @@ import org.apache.spark.sql.types.{StringType, StructField, StructType}
 import scala.collection.JavaConverters._
 
 
-
-case class V2MicroBatchOffset(rowNum: Int) extends Offset {
-
-  override def json: String = {
-//    s"""{"batch" : ${batch}, "rowNum" : ${rowNum}}"""
-    s"${rowNum}"
-  }
-
-}
-
-class V2MicroBatchDataSource extends DataSourceRegister with DataSourceV2 with MicroBatchReadSupport {
+class V2MicroBatchDataSource
+  extends DataSourceRegister with DataSourceV2 with MicroBatchReadSupport {
 
   println(s"\n\nCreating ${this.getClass.getName}.....\n")
 
@@ -45,7 +36,10 @@ class V2MicroBatchDataSource extends DataSourceRegister with DataSourceV2 with M
 
 }
 
-class V2MicroBatchDataSourceReader(partitions: Int, rowsPerPartition: Int) extends MicroBatchReader {
+
+class V2MicroBatchDataSourceReader(partitions: Int,
+                                   rowsPerPartition: Int)
+  extends MicroBatchReader {
 
   println(s"\n\nCreating ${this.getClass.getName}: ${partitions} partitions and ${rowsPerPartition} rowsPerPartition each\n")
 
@@ -123,8 +117,8 @@ class V2MicroBatchDataSourceReader(partitions: Int, rowsPerPartition: Int) exten
 
 class V2MicroBatchDataReaderFactory(partition: Int,
                                     startOffset: V2MicroBatchOffset,
-                                    endOffset: V2MicroBatchOffset
-                                   ) extends DataReaderFactory[Row] {
+                                    endOffset: V2MicroBatchOffset)
+  extends DataReaderFactory[Row] {
 
   override def createDataReader: DataReader[Row] = {
     new V2MicroBatchDataReader(partition, startOffset, endOffset)
@@ -132,7 +126,11 @@ class V2MicroBatchDataReaderFactory(partition: Int,
 
 }
 
-class V2MicroBatchDataReader(partitionNumber: Int, startOffset: V2MicroBatchOffset, endOffset: V2MicroBatchOffset) extends DataReader[Row] {
+
+class V2MicroBatchDataReader(partitionNumber: Int,
+                             startOffset: V2MicroBatchOffset,
+                             endOffset: V2MicroBatchOffset)
+  extends DataReader[Row] {
 
   println(s"\n\nCreating ${this.getClass.getName}(partitionNumber = ${partitionNumber}, startOffset = ${startOffset}, endOffset = ${endOffset})\n")
 
@@ -154,5 +152,15 @@ class V2MicroBatchDataReader(partitionNumber: Int, startOffset: V2MicroBatchOffs
   }
 
   override def close(): Unit = {}
+
+}
+
+
+case class V2MicroBatchOffset(rowNum: Int)
+  extends Offset {
+
+  override def json: String = {
+    s"${rowNum}"
+  }
 
 }
