@@ -6,33 +6,48 @@ data processing in the Hadoop and big data ecosystem for several reasons.
 First, it offers a unifying, consistent, easy-to-use REPL-based interactive and 
 programmatic environment for all those kinds of processing. 
 Second, the Spark ecosystem has built-in as well as third-party connectors to pull 
-and push data from a variety of batch (or static) and streaming data sources. 
-And third, there is a good userbase and ecosystem along with several resources.
+and push data from a variety of batch and streaming data sources. 
+And third, there is a large and helpful userbase and ecosystem along with several resources.
 
 However there are occasions where a connector for a specific data source
 is not available or an existing connector is not suitable and needs considerable 
 modification to fit a use case.
 
-This is a very simple tutorial and working example to help understand how batch and streaming 
+This is a very simple tutorial ()working examples) to help understand how batch and streaming 
 data source and sink connectors work. The intent is that the examples will help developers 
-build new connnectors as well as improve/customize existing ones.
+build new connnectors as well as customize existing ones and hopefully contribute back to the Spark community.
 
-## Details
-For the purpose of this tutorial, a data source that just produces a single string based dataset
-for both batch and streaming datastream is being considered. Note that the notion of distrubted 
-dataset in Spark has been evolving - starting with RDD with the initial version and no strong notion of a 
-schema for the distributed dataset, then evolving to DataFrame with schema,
-followed by Dataset which are strongly typed. On the streaming front, the idea was introduced
-using dstream (spark streaming), followed by structured streaming which introduced once-only 
-semantics and recoverability with certain assumptions on the source and sink side. 
-As of this writing (March 2018), Beginning Spark 2.3 (released Feb 28, 2018), 
-I see another evolution in the works for structured streaming that does away with offsets and 
-also facilitates "continuous streaming".
+## Batch v/s Streaming
+Note that starting with Spark 2.3, there is the notion of batch, microbatch streaming and continuous streaming 
+data sources. Batch is essentially reading data from a static, non-mutating data source 
+(non-mutating for the duration of the data extract). 
 
-Static distributed data (aka RDD) with a schema is referred to as a relation, while a structured 
-datastream with a schema is referred to as a source. 
-The schema can be pre-determined, user-provided or inferred from the datasource.
-The following references provide more details on RDDs and structure data streams.
+Microbatch streaming or simply microbatch is the notion that was introduced in Spark v1.6 where data is retrieved from a 
+data source at short periodic intervals (seconds to minutes). 
+Like RDD v/s Dataset, the initial notion of streaming, known as dstream was not strongly typed. 
+And Spark 2.0 introduced structured streaming that is strongly typed and has recoverability/restartability capabilities.
+
+Continuous streaming is the notion that has been introduced with Spark 2.3 that has low latency and I think is still evolving.
+
+A key difference between microbatch and continuous from an architecture perspective is how the low latency is achieved.
+In microbatch, the actual data generating class is instantiated on the driver at each processing interval for all partitions
+and distributed to the executors at each trigger interval. In continuous streaming source, the class is instantiated only once
+for each partition.
+
+Also, each trigger or processing interval is referred to as epoch in the API documentation.
+
+## Source and Sink V2 API
+Spark 2.3 is a watershed moment as it introduced the notions of microbatch v/s continuous streaming 
+and the initial version of the evolving V2 Source and Sink API. Prior to this version, writing your own
+custom data source and sink was non-trivial and requiring non-trivial effort and understanding of some 
+Spark internals/code. And developing a streaming source required you to create your package as a sub-package
+of org.apache.spark.sql as certain methods were not exposed otherwise.
+
+V2 API made developing sources and sinks quite simple and requires implementing a few simple and consistent 
+APIs (Java interfaces). Note that this is still an evolving interface and there is the potential of some 
+changes to the API, but it is hoped that the changes would not be very disruptive or may be downward compatible.
+
+Below are some reference sources that provide additional details on RDDs and structured streaming.
 
 [Matei Zahari's Original Spark Paper](http://people.csail.mit.edu/matei/papers/2012/nsdi_spark.pdf)
 
@@ -46,27 +61,12 @@ The following references provide more details on RDDs and structure data streams
 
 [Jacek Laskowski's Online Git-Book on Spark Streaming](https://jaceklaskowski.gitbooks.io/spark-structured-streaming/)
 
-
-The foundation for both batch and streaming datasources is RDD as described in the original paper. 
-An RDD (*** link ***) (abstract class) in turn, is composed of zero, one or more partitions (*** link ***) (trait). 
-In batch, an RDD and its schema are provided by implementing the abstract class BaseRelation (*** link ***)
-(do you see any correlation to a table and relation in relational database theory?!). 
-In streaming, the same is achieved by implementing the abstract class Source (*** link ***). 
-And finally, you make Spark aware of your batch or streaming datasource by 
-implementing DatasourceRegister (*** link ***) and RelationProvider (*** link ***) (batch) or 
-StreamSourceProvider (*** link ***) (streaming).
-
-Streaming has an additional notion of the datasource being a continuous, source of data 
-wherein each data tuple (row) is uniquely identified by an offset (similar to offset in Kafka)
-and the streaming Source is required to have the ability to generate an RDD from a specified start and end offset.
+[Continuous Streaming as Introduced in Spark 2.3](https://databricks.com/blog/2018/03/20/low-latency-continuous-processing-mode-in-structured-streaming-in-apache-spark-2-3-0.html)
 
 
 # Sample Datasource and Datasink Connectors
 
 This project contains very trivial data source connectors that generate a simple string. 
-For batch, the generated string is of the form "Partition: N, row X of Y" 
-where N is the partition number and for streaming, the string is of the form "Partition: N for time T, row X of Y"
-
 The batch and streaming datasinks simply print the input data to the console with some additional diagnostic information.
 
 # Build and Test
@@ -77,42 +77,66 @@ The project can be build using `sbt assembly` and tested using spark-shell as fo
 ```
 spark-shell --jars target/scala-2.11/sparkconn-assembly-0.1.jar
 ....
-val mydata1 = spark.read.format("BatchDataProvider").load()
+
+val mydata1 = spark.read.format("V2BatchDataSource").load()
 mydata1.show(100, false)
 
-val mydata2 = spark.read.format("BatchDataProvider").
-option("numpartitions", "5").option("rowsperpartition", "10").
+val mydata2 = spark.read.format("V2BatchDataSource").
+option("partitions", "1").option("rowsperpartition", "1").
 load()
-mydata2.show(100, false)
+mydata2.show(10, false)
 
-mydata1.write.format("BatchDataSink").save
+mydata1.write.format("V2BatchDataSink").save
 
-mydata1.write.format("BatchDataSink").mode("append").save
+mydata1.write.format("V2BatchDataSink").mode("append").save
 
 val mydata3 = spark.createDataset(1 to 10)
-mydata3.write.format("BatchDataSink").save
+mydata3.write.format("V2BatchDataSink").save
+
 ```
 
 
-## Streaming Datasource
+## MicroBatch Streaming Datasource
 ```
 spark-shell --jars target/scala-2.11/sparkconn-assembly-0.1.jar
 ....
-import org.apache.spark.sql.jayesh._
+
 import org.apache.spark.sql.streaming.Trigger
 import org.apache.spark.sql.streaming.ProcessingTime
 
-val mydataStream = spark.readStream.format("org.apache.spark.sql.jayesh.StreamDataProvider").
-option("numpartitions", "5").option("rowsperpartition", "10").load()
+val mydataStream = spark.readStream.format("V2MicroBatchDataSource").
+option("partitions", "3").option("rowsperpartition", "10").load()
 
 val query = mydataStream.writeStream.outputMode("append").
 format("console").option("truncate", "false").
 option("numRows", "100").trigger(ProcessingTime("5 second")).start()
 
-Thread.sleep(15000)
+Thread.sleep(5000)
 
 query.stop()
 
 ```
 
-## S
+## Continuous Streaming Datasource
+```
+
+import org.apache.spark.sql.streaming.Trigger
+import org.apache.spark.sql.streaming.ProcessingTime
+
+val data = spark.readStream.format("V2ContinuousDataSource").load()
+
+val query = data.writeStream.outputMode("append").format("console").option("truncate", "false").trigger(Trigger.Continuous("1 second")).start()
+
+Thread.sleep(3000)
+query.status
+query.recentProgress
+
+Thread.sleep(3000)
+query.status
+query.recentProgress
+
+query.stop
+
+
+
+```
