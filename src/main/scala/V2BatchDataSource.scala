@@ -18,7 +18,9 @@ import scala.collection.JavaConverters._
   *}}}
   */
 class V2BatchDataSource
-  extends DataSourceRegister with DataSourceV2 with ReadSupport {
+  extends DataSourceRegister
+    with DataSourceV2
+    with ReadSupport {
 
   val DEFAULT_PARTITION_COUNT: Int = 5
 
@@ -29,7 +31,7 @@ class V2BatchDataSource
   override def createReader (options: DataSourceOptions): DataSourceReader = {
     val optionsKV = options.asMap().asScala // converts options to lower-cased keyed map
     val partitions = optionsKV.getOrElse("partitions", DEFAULT_PARTITION_COUNT).toString.toInt
-    val rows = optionsKV.getOrElse("rowsPerPartition", DEFAULT_ROWS_PER_PARTITION).toString.toInt
+    val rows = optionsKV.getOrElse("rowsperpartition", DEFAULT_ROWS_PER_PARTITION).toString.toInt
     assert(partitions > 0, s"Partitions should be > 0 (specified value = ${partitions})")
     assert (rows > 0, s"Rows should be > 0 (specified value = ${rows})")
     println(s"\n\nCreating ${this.getClass.getName}: with ${partitions} partitions, each with ${rows} rowsPerPartition\n")
@@ -56,27 +58,27 @@ class V2BatchDataSourceReader(partitions: Int,
 }
 
 
-class V2BatchDataReaderFactory(partitionNumber: Int,
+class V2BatchDataReaderFactory(partition: Int,
                                rows: Int,
                                totalPartitions: Int)
   extends DataReaderFactory[Row] {
 
-  println(s"\n\nCreating ${this.getClass.getName}: ${partitionNumber} of ${totalPartitions}\n")
+  println(s"\n\nCreating ${this.getClass.getName}: ${partition} of ${totalPartitions}\n")
 
   override def createDataReader(): DataReader[Row] = {
-    new V2BatchDataReader(partitionNumber, rows)
+    new V2BatchDataReader(partition, rows)
   }
 
 }
 
 
-class V2BatchDataReader(partitionNumber: Int,
+class V2BatchDataReader(partition: Int,
                         rows: Int)
   extends DataReader[Row] {
 
   private var rowsRemaining = rows
 
-  println(s"\n\nCreating ${this.getClass.getName}: ${partitionNumber}\n")
+  println(s"\n\nCreating ${this.getClass.getName}: ${partition}\n")
 
   override def next(): Boolean = rowsRemaining > 0
 
@@ -85,7 +87,7 @@ class V2BatchDataReader(partitionNumber: Int,
 
     if (next) {
       rowsRemaining = rowsRemaining - 1
-      resultRow = Row(s"Partition: ${partitionNumber} || Row ${rows - rowsRemaining} of ${rows}")
+      resultRow = Row(s"Partition: ${partition} || Row ${rows - rowsRemaining} of ${rows}")
     } else {
       new IllegalArgumentException
     }

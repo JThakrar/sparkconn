@@ -2,6 +2,8 @@
 
 import java.util.Optional
 
+import scala.collection.JavaConverters._
+
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.sources.DataSourceRegister
 import org.apache.spark.sql.sources.v2.reader.{DataReader, DataReaderFactory}
@@ -9,17 +11,19 @@ import org.apache.spark.sql.sources.v2.reader.streaming.{MicroBatchReader, Offse
 import org.apache.spark.sql.sources.v2.{DataSourceOptions, DataSourceV2, MicroBatchReadSupport}
 import org.apache.spark.sql.types.{StringType, StructField, StructType}
 
-import scala.collection.JavaConverters._
-
+import org.json4s.NoTypeHints
+import org.json4s.jackson.Serialization
 
 class V2MicroBatchDataSource
-  extends DataSourceRegister with DataSourceV2 with MicroBatchReadSupport {
+  extends DataSourceRegister
+    with DataSourceV2
+    with MicroBatchReadSupport {
 
   println(s"\n\nCreating ${this.getClass.getName}.....\n")
 
   val DEFAULT_PARTITION_COUNT: Int = 5
 
-  val DEFAULT_ROWS_PER_PARTITION: Int = 5
+  val DEFAULT_ROWS_PER_PARTITION_PER_BATCH: Int = 5
 
   override def shortName(): String = "v2microbatchdatasource"
 
@@ -28,7 +32,7 @@ class V2MicroBatchDataSource
                                       options: DataSourceOptions): MicroBatchReader = {
     val optionsKV = options.asMap().asScala // converts options to lower-cased keyed map
     val partitions = optionsKV.getOrElse("partitions", DEFAULT_PARTITION_COUNT).toString.toInt
-    val rows = optionsKV.getOrElse("rowsperpartition", DEFAULT_ROWS_PER_PARTITION).toString.toInt
+    val rows = optionsKV.getOrElse("rowsperpartition", DEFAULT_ROWS_PER_PARTITION_PER_BATCH).toString.toInt
     assert(partitions > 0, s"Partitions should be > 0 (specified value = ${partitions})")
     assert (rows > 0, s"Rows should be > 0 (specified value = ${rows})")
     new V2MicroBatchDataSourceReader(partitions, rows)
@@ -41,7 +45,7 @@ class V2MicroBatchDataSourceReader(partitions: Int,
                                    rowsPerPartition: Int)
   extends MicroBatchReader {
 
-  println(s"\n\nCreating ${this.getClass.getName}: ${partitions} partitions and ${rowsPerPartition} rowsPerPartition each\n")
+  println(s"\n\nCreating ${this.getClass.getName}: ${partitions} partitions, ${rowsPerPartition} rows/partition\n")
 
   private var startOffset: V2MicroBatchOffset = V2MicroBatchOffset(0)
   private var endOffset: V2MicroBatchOffset = V2MicroBatchOffset(0 + rowsPerPartition)
@@ -59,8 +63,8 @@ class V2MicroBatchDataSourceReader(partitions: Int,
 
   override def createDataReaderFactories: java.util.List[DataReaderFactory[Row]] = {
     println(s"\n\n${this.getClass.getName}.createDataReaderFactories called\n")
-    (1 to partitions).map(partition =>
-      new V2MicroBatchDataReaderFactory(partition, startOffset, endOffset).asInstanceOf[DataReaderFactory[Row]]).asJava
+    (1 to partitions).map(p =>
+      new V2MicroBatchDataReaderFactory(p, startOffset, endOffset).asInstanceOf[DataReaderFactory[Row]]).asJava
   }
 
   override def setOffsetRange(start: Optional[Offset], end: Optional[Offset]): Unit = {
@@ -108,8 +112,9 @@ class V2MicroBatchDataSourceReader(partitions: Int,
   }
 
   override def deserializeOffset(json: String): Offset = {
-    val rowNum = json.toInt
-    new V2MicroBatchOffset(rowNum)
+    implicit val formats = Serialization.formats(NoTypeHints)
+    val offset = Serialization.read[V2MicroBatchOffset](json)
+    offset.asInstanceOf[Offset]
   }
 
 }
@@ -119,6 +124,8 @@ class V2MicroBatchDataReaderFactory(partition: Int,
                                     startOffset: V2MicroBatchOffset,
                                     endOffset: V2MicroBatchOffset)
   extends DataReaderFactory[Row] {
+
+  println(s"\n\nCreating ${this.getClass.getName} (partitions = ${partition}, startOffset = ${startOffset}, endOffset = ${endOffset}")
 
   override def createDataReader: DataReader[Row] = {
     new V2MicroBatchDataReader(partition, startOffset, endOffset)
@@ -132,7 +139,7 @@ class V2MicroBatchDataReader(partitionNumber: Int,
                              endOffset: V2MicroBatchOffset)
   extends DataReader[Row] {
 
-  println(s"\n\nCreating ${this.getClass.getName}(partitionNumber = ${partitionNumber}, startOffset = ${startOffset}, endOffset = ${endOffset})\n")
+  println(s"\n\nCreating ${this.getClass.getName} (partition = ${partitionNumber}: startOffset = ${startOffset}, endOffset = ${endOffset})\n")
 
   var startRow = startOffset.rowNum
   val endRow = endOffset.rowNum
@@ -160,7 +167,8 @@ case class V2MicroBatchOffset(rowNum: Int)
   extends Offset {
 
   override def json: String = {
-    s"${rowNum}"
+    implicit val formats = Serialization.formats(NoTypeHints)
+    Serialization.write(this)
   }
 
 }
