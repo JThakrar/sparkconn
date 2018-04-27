@@ -5,15 +5,19 @@ import org.apache.spark.sql.sources.v2.reader.{DataReader, DataReaderFactory, Da
 import org.apache.spark.sql.sources.v2.{DataSourceOptions, DataSourceV2, ReadSupport}
 import org.apache.spark.sql.types.{StringType, StructField, StructType}
 
+
 import scala.collection.JavaConverters._
+
 
 /**
   * Batch (non-streaming) data source using the V2 API.
+  * V2BatchDataSource class name is the entry point that needs to be specified to a dataframe reader.
+  * This then enables instantiating a DataSourceReader.
   * Example Usage:
   *{{{
   *
-  * scala> val data = spark.read.format("V2BatchDataSource")
-  * scala> data.show(50, false)
+  * scala> val data = spark.read.format("V2BatchDataSource").load()
+  * scala> data.show(25, false)
   *
   *}}}
   */
@@ -26,7 +30,7 @@ class V2BatchDataSource
 
   val DEFAULT_ROWS_PER_PARTITION: Int = 5
 
-  override def shortName(): String = "v2batchdatasource"
+  override def shortName(): String = "v2batchdatasource"  // to implement DataSourceRegister
 
   override def createReader (options: DataSourceOptions): DataSourceReader = {
     val optionsKV = options.asMap().asScala // converts options to lower-cased keyed map
@@ -36,10 +40,19 @@ class V2BatchDataSource
     assert (rows > 0, s"Rows should be > 0 (specified value = ${rows})")
     println(s"\n\nCreating ${this.getClass.getName}: with ${partitions} partitions, each with ${rows} rowsPerPartition\n")
     new V2BatchDataSourceReader(partitions, rows)
-  }
+  } // to implement ReadSupport
 }
 
 
+/**
+  * V2BatchDataSourceReader implements DataSourceReader.
+  * It needs to know the schema of the source data - which can be pre-determined,
+  * user-supplied or to be determined at run-time.
+  * Furthermore, it should also know the number of data partitions for the source
+  * as it will need to create that many DataReaderFactory objects.
+  * @param partitions
+  * @param rows
+  */
 class V2BatchDataSourceReader(partitions: Int,
                               rows: Int)
   extends DataSourceReader {
@@ -58,6 +71,17 @@ class V2BatchDataSourceReader(partitions: Int,
 }
 
 
+/**
+  * As the documentation for {@link org.apache.spark.sql.sources.v2.reader.DataReaderFactory}
+  * indicates, this class is like an iterable (an object that provides an iterator)
+  * and provides the corresponding DataReader which is the iterator equivalent.
+  * Note that the DataReaderFactory is instantiated at the Driver and then serialized
+  * and sent to each executor where DataReader is later deserialized
+  * to read the actual source data.
+  * @param partition
+  * @param rows
+  * @param totalPartitions
+  */
 class V2BatchDataReaderFactory(partition: Int,
                                rows: Int,
                                totalPartitions: Int)
@@ -72,6 +96,11 @@ class V2BatchDataReaderFactory(partition: Int,
 }
 
 
+/**
+  * The workhorse logic - read data from the source on behalf of a specific partition.
+  * @param partition
+  * @param rows
+  */
 class V2BatchDataReader(partition: Int,
                         rows: Int)
   extends DataReader[Row] {

@@ -63,6 +63,7 @@ Below are some reference sources that provide additional details on RDDs and str
 
 [Continuous Streaming as Introduced in Spark 2.3](https://databricks.com/blog/2018/03/20/low-latency-continuous-processing-mode-in-structured-streaming-in-apache-spark-2-3-0.html)
 
+[MongoDB Spark Driver Presentation @ Spark Summit 2016](https://www.youtube.com/watch?v=O9kpduk5D48)
 
 # Sample Datasource and Datasink Connectors
 
@@ -109,7 +110,7 @@ option("partitions", "3").option("rowsperpartition", "10").load()
 
 val query = mydataStream.writeStream.outputMode("append").
 format("console").option("truncate", "false").
-option("numRows", "100").trigger(ProcessingTime("5 second")).start()
+option("numRows", "100").trigger(ProcessingTime("1 second")).start()
 
 Thread.sleep(5000)
 
@@ -125,18 +126,12 @@ import org.apache.spark.sql.streaming.ProcessingTime
 
 val data = spark.readStream.format("V2ContinuousDataSource").load()
 
-val query = data.writeStream.outputMode("append").format("console").option("truncate", "false").trigger(Trigger.Continuous("1 second")).start()
+val query = data.writeStream.outputMode("append").
+format("console").option("truncate", "false").
+trigger(Trigger.Continuous("1 second")).start()
 
-Thread.sleep(3000)
-query.status
-query.recentProgress
-
-Thread.sleep(3000)
-query.status
-query.recentProgress
+Thread.sleep(5000)
 
 query.stop
-
-
 
 ```
