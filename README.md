@@ -80,6 +80,7 @@ spark-shell --jars target/scala-2.11/sparkconn-assembly-0.1.jar
 ....
 
 val mydata1 = spark.read.format("V2BatchDataSource").load()
+mydata1.printSchema
 mydata1.show(100, false)
 
 val mydata2 = spark.read.format("V2BatchDataSource").
@@ -105,10 +106,13 @@ spark-shell --jars target/scala-2.11/sparkconn-assembly-0.1.jar
 import org.apache.spark.sql.streaming.Trigger
 import org.apache.spark.sql.streaming.ProcessingTime
 
-val mydataStream = spark.readStream.format("V2MicroBatchDataSource").
+val data = spark.readStream.format("V2MicroBatchDataSource").
 option("partitions", "3").option("rowsperpartition", "10").load()
 
-val query = mydataStream.writeStream.outputMode("append").
+val query = data.writeStream.outputMode("append").
+format("console").option("truncate", "false").trigger(Trigger.Once).start()
+
+val query = data.writeStream.outputMode("append").
 format("console").option("truncate", "false").
 option("numRows", "100").trigger(ProcessingTime("1 second")).start()
 
@@ -125,6 +129,10 @@ import org.apache.spark.sql.streaming.Trigger
 import org.apache.spark.sql.streaming.ProcessingTime
 
 val data = spark.readStream.format("V2ContinuousDataSource").load()
+
+val query = data.writeStream.outputMode("append").
+            format("console").option("truncate", "false").
+            trigger(Trigger.Once).start()
 
 val query = data.writeStream.outputMode("append").
 format("console").option("truncate", "false").
