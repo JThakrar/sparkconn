@@ -8,7 +8,7 @@ val scalaTestVersion = "3.0.4"
 
 val sparkVersion = "2.3.0"
 
-val json4sVersion = "3.5.3"
+val json4sVersion = "3.2.11"
 
 libraryDependencies += "org.scalatest" %% "scalatest" % scalaTestVersion % "test"
 
