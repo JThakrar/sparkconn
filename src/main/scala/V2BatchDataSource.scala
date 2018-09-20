@@ -23,7 +23,6 @@ import scala.collection.JavaConverters._
   */
 class V2BatchDataSource
   extends DataSourceRegister
-//    with DataSourceV2 // currently an empty interface
     with ReadSupport { // use ReadSupportWithSchema to support user-provided Schema
 
   val DEFAULT_PARTITION_COUNT: Int = 5
