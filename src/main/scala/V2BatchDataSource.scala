@@ -33,8 +33,8 @@ class V2BatchDataSource
 
   override def createReader(options: DataSourceOptions): DataSourceReader = { // to implement ReadSupport
     val optionsKV = options.asMap().asScala // converts options to lower-cased keyed map
-    val partitions = optionsKV.getOrElse("partitions", DEFAULT_PARTITION_COUNT).toString.toInt
-    val rows = optionsKV.getOrElse("rowsperpartition", DEFAULT_ROWS_PER_PARTITION).toString.toInt
+    val partitions = optionsKV.getOrElse("partitions", DEFAULT_PARTITION_COUNT.toString).toInt
+    val rows = optionsKV.getOrElse("rowsperpartition", DEFAULT_ROWS_PER_PARTITION.toString).toInt
     assert(partitions > 0, s"Partitions should be > 0 (specified value = $partitions)")
     assert(rows > 0, s"Rows should be > 0 (specified value = $rows)")
     println(s"\n\nCreating ${this.getClass.getName}: with $partitions partitions, each with $rows rowsPerPartition\n")

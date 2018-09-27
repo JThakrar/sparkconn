@@ -32,8 +32,8 @@ class V2ContinuousDataSource
                                        checkpointLocation: String,
                                        options: DataSourceOptions): ContinuousReader = {
     val optionsKV = options.asMap().asScala // converts options to lower-cased keyed map
-    val partitions = optionsKV.getOrElse("partitions", DEFAULT_PARTITION_COUNT).toString.toInt
-    val start = optionsKV.getOrElse("start", DEFAULT_START_OFFSET).toString.toInt
+    val partitions = optionsKV.getOrElse("partitions", DEFAULT_PARTITION_COUNT.toString).toInt
+    val start = optionsKV.getOrElse("start", DEFAULT_START_OFFSET.toString).toInt
     val end = optionsKV.getOrElse("end", DEFAULT_END_OFFSET).toString.toInt
     assert(partitions > 0, s"Partitions should be > 0 (specified value = ${partitions})")
     assert(end > start, s"End offset (${end}) is not greater than start offset (${start})")
